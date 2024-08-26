@@ -12,12 +12,12 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            flex-direction: column; /* Stack items vertically */
+            flex-direction: column; 
         }
         
         #game-container {
             display: flex;
-            flex-direction: column; /* Stack elements vertically */
+            flex-direction: column; 
             justify-content: center;
             align-items: center;
             background-color: #000;
@@ -32,7 +32,7 @@
             background-color: #333;
             padding: 10px;
             border: 2px solid #555;
-            margin-top: 10px; /* Space between heading and board */
+            margin-top: 10px; 
         }
         
         .cell {
@@ -59,7 +59,7 @@
         .selected { border: 2px solid yellow; }
         
         #game-info {
-            margin-bottom: 10px; /* Space between heading and board */
+            margin-bottom: 10px; 
             font-size: 18px;
             text-align: center;
         }
@@ -82,21 +82,21 @@
             font-size: 20px;
             color: yellow;
             text-align: center;
-            flex-direction: column; /* Stack items vertically */
+            flex-direction: column; 
             align-items: center;
         }
 
         #congratulations {
             margin-bottom: 10px;
         }
-        /* Styling for Move History Section */
+       
         #move-history {
-            background-color: #080808; /* Light background color */
-            border-top: 1px solid #272626; /* Add border on top to separate */
+            background-color: #080808; 
+            border-top: 1px solid #272626; 
             padding: 10px;
             box-sizing: border-box;
             width: 100%;
-            margin-top: 20px; /* Space between board and history */
+            margin-top: 20px; 
         }
         
         #move-history h3 {
@@ -112,7 +112,7 @@
             list-style-type: none;
             margin: 0;
             padding: 0;
-            max-height: 150px; /* Limit the height and make it scrollable */
+            max-height: 150px; 
             overflow-y: auto;
         }
         
@@ -123,7 +123,6 @@
             color: #555;
         }
         
-        /* Scrollbar styling */
         #history-list::-webkit-scrollbar {
             width: 6px;
         }
@@ -178,7 +177,7 @@
         });
         socket.on('moveHistory', (history) => {
             const historyList = document.getElementById('history-list');
-            historyList.innerHTML = ''; // Clear existing history
+            historyList.innerHTML = ''; 
         
             history.forEach(move => {
                 const listItem = document.createElement('li');
@@ -196,8 +195,8 @@
         socket.on('gameOver', (winner) => {
             console.log(`Received gameOver event: Player ${winner} wins`);
             congratulations.textContent = `Congratulations Player ${winner}! You have won the game!`;
-            congratulationsContainer.style.display = 'flex'; // Show container and stack content vertically
-            movementControls.innerHTML = ''; // Disable movement controls
+            congratulationsContainer.style.display = 'flex'; 
+            movementControls.innerHTML = '';
         });
 
         socket.on('invalidMove', (message) => {
@@ -214,7 +213,7 @@
                     cell.dataset.col = col;
 
                     cell.ondragover = (event) => {
-                        event.preventDefault(); // Allow drop
+                        event.preventDefault(); 
                     };
 
                     cell.ondrop = (event) => {
@@ -285,7 +284,6 @@
                 case 'BL': newRow++; newCol--; break;
                 case 'BR': newRow++; newCol++; break;
             }
-            // Validate new position
             if (newRow >= 0 && newRow < 5 && newCol >= 0 && newCol < 5) {
                 socket.emit('moveCharacter', { charInfo: selectedPiece, oldRow, oldCol, newRow, newCol });
             }
@@ -294,9 +292,9 @@
         newGameButton.onclick = startNewGame;
 
         function startNewGame() {
-            congratulationsContainer.style.display = 'none'; // Hide congratulations container
-            congratulations.innerHTML = ''; // Clear congratulations message
-            socket.emit('newGame'); // Emit new game event to server
+            congratulationsContainer.style.display = 'none';
+            congratulations.innerHTML = ''; 
+            socket.emit('newGame'); 
         }
     </script>
 </body>
