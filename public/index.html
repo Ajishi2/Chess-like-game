@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Turn-Based Chess-Like Game</title>
+    <style>
+        body {
+            background-color: #000;
+            color: white;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column; /* Stack items vertically */
+        }
+        
+        #game-container {
+            display: flex;
+            flex-direction: column; /* Stack elements vertically */
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            padding: 0;
+        }
+        
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(5, 60px);
+            grid-template-rows: repeat(5, 60px);
+            gap: 1px;
+            background-color: #333;
+            padding: 10px;
+            border: 2px solid #555;
+            margin-top: 10px; /* Space between heading and board */
+        }
+        
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: white;
+            background-color: #555;
+            cursor: pointer;
+        }
+        .piece {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .player-a { background-color: #4CAF50; }
+        .player-b { background-color: #2196F3; }
+        .selected { border: 2px solid yellow; }
+        
+        #game-info {
+            margin-bottom: 10px; /* Space between heading and board */
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        button {
+            margin: 0 5px;
+            padding: 5px 10px;
+            background-color: #444;
+            border: 1px solid #666;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        
+        #congratulations-container {
+            display: none;
+            margin-top: 20px;
+            font-size: 20px;
+            color: yellow;
+            text-align: center;
+            flex-direction: column; /* Stack items vertically */
+            align-items: center;
+        }
+
+        #congratulations {
+            margin-bottom: 10px;
+        }
+        /* Styling for Move History Section */
+        #move-history {
+            background-color: #080808; /* Light background color */
+            border-top: 1px solid #272626; /* Add border on top to separate */
+            padding: 10px;
+            box-sizing: border-box;
+            width: 100%;
+            margin-top: 20px; /* Space between board and history */
+        }
+        
+        #move-history h3 {
+            margin: 0;
+            padding-bottom: 5px;
+            font-size: 18px;
+            text-align: center;
+            font-weight: bold;
+            color: #707070;
+        }
+        
+        #history-list {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            max-height: 150px; /* Limit the height and make it scrollable */
+            overflow-y: auto;
+        }
+        
+        #history-list li {
+            font-size: 14px;
+            padding: 5px;
+            border-bottom: 1px solid #0c0c0c;
+            color: #555;
+        }
+        
+        /* Scrollbar styling */
+        #history-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #history-list::-webkit-scrollbar-thumb {
+            background-color: #adb5bd;
+            border-radius: 3px;
+        }
+        
+        #history-list::-webkit-scrollbar-track {
+            background-color: #f8f9fa;
+        }
+        
+
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-info">Current Player: A</div>
+        <div id="game-board"></div>
+        <div id="movement-controls"></div>
+        <div id="move-history">
+            <h3>Move History</h3>
+            <ul id="history-list"></ul>
+        </div>
+        
+        <button id="new-game-button">Start New Game</button>
+    </div>
+</div>
+        <div id="congratulations-container">
+            <div id="congratulations"></div>
+         
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const gameBoard = document.getElementById('game-board');
+        const gameInfo = document.getElementById('game-info');
+        const movementControls = document.getElementById('movement-controls');
+        const congratulationsContainer = document.getElementById('congratulations-container');
+        const congratulations = document.getElementById('congratulations');
+        const newGameButton = document.getElementById('new-game-button');
+        let selectedPiece = null;
+        let gameState = null;
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
+        socket.on('moveHistory', (history) => {
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = ''; // Clear existing history
+        
+            history.forEach(move => {
+                const listItem = document.createElement('li');
+                listItem.textContent = move;
+                historyList.appendChild(listItem);
+            });
+        });
+        
+        socket.on('gameState', (state) => {
+            gameState = state;
+            renderBoard(gameState);
+            updateGameInfo(gameState);
+        });
+
+        socket.on('gameOver', (winner) => {
+            console.log(`Received gameOver event: Player ${winner} wins`);
+            congratulations.textContent = `Congratulations Player ${winner}! You have won the game!`;
+            congratulationsContainer.style.display = 'flex'; // Show container and stack content vertically
+            movementControls.innerHTML = ''; // Disable movement controls
+        });
+
+        socket.on('invalidMove', (message) => {
+            alert(message);
+        });
+
+        function renderBoard(gameState) {
+            gameBoard.innerHTML = '';
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 5; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+
+                    cell.ondragover = (event) => {
+                        event.preventDefault(); // Allow drop
+                    };
+
+                    cell.ondrop = (event) => {
+                        event.preventDefault();
+                        if (selectedPiece && gameState.currentTurn === selectedPiece.charAt(0)) {
+                            const { name, row: oldRow, col: oldCol } = JSON.parse(event.dataTransfer.getData('text/plain'));
+                            const newRow = parseInt(cell.dataset.row, 10);
+                            const newCol = parseInt(cell.dataset.col, 10);
+                            socket.emit('moveCharacter', { charInfo: name, oldRow, oldCol, newRow, newCol });
+                        } else {
+                            alert('It is not your turn!');
+                        }
+                    };
+
+                    const piece = gameState.grid[row][col];
+                    if (piece) {
+                        const pieceDiv = document.createElement('div');
+                        pieceDiv.className = `piece player-${piece.player.toLowerCase()}`;
+                        pieceDiv.textContent = piece.name;
+                        pieceDiv.draggable = true;
+
+                        pieceDiv.ondragstart = (event) => {
+                            event.dataTransfer.setData('text/plain', JSON.stringify({ name: piece.name, row, col }));
+                            selectPiece(piece.name, row, col);
+                        };
+
+                        cell.appendChild(pieceDiv);
+                    }
+
+                    gameBoard.appendChild(cell);
+                }
+            }
+        }
+
+        function updateGameInfo(gameState) {
+            gameInfo.textContent = `Current Player: ${gameState.currentTurn}`;
+            if (selectedPiece) {
+                gameInfo.textContent += ` | Selected: ${selectedPiece}`;
+            }
+        }
+
+        function selectPiece(pieceName, row, col) {
+            selectedPiece = pieceName;
+            updateMovementControls(row, col);
+        }
+
+        function updateMovementControls(row, col) {
+            movementControls.innerHTML = '';
+            const movements = selectedPiece.includes('H') ? ['FL', 'FR', 'BL', 'BR'] : ['L', 'R', 'F', 'B'];
+            movements.forEach(direction => {
+                const button = document.createElement('button');
+                button.textContent = direction;
+                button.onclick = () => move(direction, row, col);
+                movementControls.appendChild(button);
+            });
+        }
+
+        function move(direction, oldRow, oldCol) {
+            let newRow = oldRow;
+            let newCol = oldCol;
+            switch (direction) {
+                case 'L': newCol--; break;
+                case 'R': newCol++; break;
+                case 'F': newRow--; break;
+                case 'B': newRow++; break;
+                case 'FL': newRow--; newCol--; break;
+                case 'FR': newRow--; newCol++; break;
+                case 'BL': newRow++; newCol--; break;
+                case 'BR': newRow++; newCol++; break;
+            }
+            // Validate new position
+            if (newRow >= 0 && newRow < 5 && newCol >= 0 && newCol < 5) {
+                socket.emit('moveCharacter', { charInfo: selectedPiece, oldRow, oldCol, newRow, newCol });
+            }
+        }
+
+        newGameButton.onclick = startNewGame;
+
+        function startNewGame() {
+            congratulationsContainer.style.display = 'none'; // Hide congratulations container
+            congratulations.innerHTML = ''; // Clear congratulations message
+            socket.emit('newGame'); // Emit new game event to server
+        }
+    </script>
+</body>
+</html>
